@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mahalu Spa — Ayu Marketing Workspace</title>
+    <!-- Google Fonts for elevated luxury typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <!-- <div class="brand-mark">M</div> -->
+        <div
+          class=""
+          style="
+            width: 40px;
+            height: 40px;
+            border-radius: 10%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          "
+        >
+          <img
+            src="/public/assets/images/favicon-96.webp"
+            alt="Mahalu Spa Logo"
+            style="width: 100%; height: 100%; object-fit: cover"
+          />
+        </div>
+        <div>
+          <strong>Mahalu Spa</strong>
+          <span>Marketing Workspace</span>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button
+          id="themeToggle"
+          class="theme-toggle-btn"
+          aria-label="Toggle Mode Gelap/Terang"
+          title="Ubah Tema"
+        >
+          <svg
+            class="sun-icon"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        </button>
+
+        <label class="role-switch">
+          <span>Mode</span>
+          <select id="roleSelect">
+            <option value="ayu">Ayu / Marketing</option>
+            <option value="ceo">CEO / Approval</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-nav">
+          <button class="nav-item active" data-view="today">
+            <span class="nav-icon">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
+            <span>Checklist Harian</span>
+          </button>
+          <button class="nav-item" data-view="weekly">
+            <span class="nav-icon">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            </span>
+            <span>Content Plan Mingguan</span>
+          </button>
+          <button class="nav-item" data-view="approval">
+            <span class="nav-icon">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </span>
+            <span>Approval CEO</span>
+          </button>
+        </div>
+
+        <div class="sidebar-note">
+          <strong>SOP Target Harian</strong>
+          <span
+            >9 Feed (7 TikTok + 2 IG)<br />7 TikTok Story<br />10 Instagram
+            Story</span
+          >
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <!-- TODAY -->
+        <section class="view active" id="today">
+          <div class="page-head">
+            <div class="page-head-text">
+              <p class="eyebrow">EKSEKUSI HARIAN</p>
+              <h1>Checklist Harian Ayu</h1>
+              <p class="sub">
+                Apa yang harus di-upload, di platform mana, dan jam berapa.
+              </p>
+            </div>
+            <div class="date-control">
+              <button
+                id="prevDay"
+                class="icon-button"
+                aria-label="Hari sebelumnya"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+              <input id="currentDate" type="date" />
+              <button
+                id="nextDay"
+                class="icon-button"
+                aria-label="Hari berikutnya"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card">
+              <span>Total kewajiban</span>
+              <strong id="dailyTotal">26</strong>
+              <small>Feed + Story</small>
+            </article>
+            <article class="metric-card">
+              <span>Selesai</span>
+              <strong id="dailyDone">0</strong>
+              <small id="dailyDonePct">0%</small>
+            </article>
+            <article class="metric-card">
+              <span>On Time</span>
+              <strong id="dailyOnTime">0</strong>
+              <small>otomatis dari waktu terbit</small>
+            </article>
+            <article class="metric-card">
+              <span>Late / Missed</span>
+              <strong id="dailyIssue">0</strong>
+              <small>perlu alasan</small>
+            </article>
+          </div>
+
+          <div class="compliance-card">
+            <div class="compliance-top">
+              <div>
+                <strong>SOP Compliance Hari Ini</strong>
+                <span>Dihitung dari slot SOP yang benar-benar selesai.</span>
+              </div>
+              <strong class="big-pct" id="dailyCompliance">0%</strong>
+            </div>
+            <div class="progress">
+              <span id="dailyProgress" style="width: 0%"></span>
+            </div>
+          </div>
+
+          <div class="section-title-row">
+            <div>
+              <h2>Feed Posting</h2>
+              <p>TikTok 7x/hari + Instagram 2x/hari.</p>
+            </div>
+            <div class="legend">
+              <span class="dot planned"></span> Belum
+              <span class="dot done"></span> Selesai
+              <span class="dot late"></span> Late
+            </div>
+          </div>
+
+          <div id="feedChecklist" class="task-list"></div>
+
+          <div class="section-title-row">
+            <div>
+              <h2>Story Checklist</h2>
+              <p>TikTok mengikuti slot feed. Instagram 10 slide/hari.</p>
+            </div>
+          </div>
+
+          <div class="story-layout">
+            <article class="panel-card">
+              <div class="panel-head">
+                <div>
+                  <strong>TikTok Story</strong>
+                  <span>7 touchpoint / hari</span>
+                </div>
+                <span class="counter" id="ttStoryCounter">0/7</span>
+              </div>
+              <div id="ttStoryGrid" class="story-grid"></div>
+            </article>
+
+            <article class="panel-card">
+              <div class="panel-head">
+                <div>
+                  <strong>Instagram Story</strong>
+                  <span>10 slide / hari</span>
+                </div>
+                <span class="counter" id="igStoryCounter">0/10</span>
+              </div>
+              <div id="igStoryGrid" class="story-grid ig"></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- WEEKLY PLAN -->
+        <section class="view" id="weekly">
+          <div class="page-head">
+            <div class="page-head-text">
+              <p class="eyebrow">PERENCANAAN</p>
+              <h1>Content Plan Mingguan</h1>
+              <p class="sub">Ayu mengisi rencana 7 hari lalu submit ke CEO.</p>
+            </div>
+            <div class="week-actions ayu-only">
+              <button id="saveWeek" class="secondary-btn">Simpan Draft</button>
+              <button id="submitWeek" class="primary-btn">Submit ke CEO</button>
+            </div>
+          </div>
+
+          <div class="weekly-summary">
+            <div class="summary-card">
+              <span class="summary-label">Minggu</span>
+              <strong id="weekRange" class="summary-val">—</strong>
+            </div>
+            <div class="summary-card">
+              <span class="summary-label">Status</span>
+              <div>
+                <strong id="weekStatus" class="status-pill draft">DRAFT</strong>
+              </div>
+            </div>
+            <div class="summary-card">
+              <span class="summary-label">Plan Completion</span>
+              <strong id="planCompletion" class="summary-val">0%</strong>
+            </div>
+          </div>
+
+          <article class="strategy-card">
+            <div class="card-header">
+              <div>
+                <h2>Weekly Strategy</h2>
+                <p>Ringkasan yang pertama kali dilihat CEO.</p>
+              </div>
+            </div>
+            <div class="strategy-grid">
+              <label>
+                <span>Objective minggu ini</span>
+                <select id="weekObjective" class="ayu-input">
+                  <option value="">Pilih objective</option>
+                  <option>Awareness</option>
+                  <option>Awareness + Leads</option>
+                  <option>Conversion</option>
+                  <option>Brand Building</option>
+                </select>
+              </label>
+              <label>
+                <span>Treatment focus</span>
+                <input
+                  id="weekFocus"
+                  class="ayu-input"
+                  placeholder="Contoh: Balinese + Japanese Hair"
+                />
+              </label>
+              <label>
+                <span>Campaign / Theme</span>
+                <input
+                  id="weekCampaign"
+                  class="ayu-input"
+                  placeholder="Contoh: Hidden Wellness in Depok"
+                />
+              </label>
+            </div>
+            <label class="full-label">
+              <span>Catatan arah minggu ini</span>
+              <textarea
+                id="weekNotes"
+                class="ayu-input"
+                rows="3"
+                placeholder="Apa yang mau didorong minggu ini?"
+              ></textarea>
+            </label>
+          </article>
+
+          <div id="dayTabs" class="day-tabs"></div>
+
+          <article class="plan-table-card">
+            <div class="card-header">
+              <div>
+                <h2 id="selectedDayTitle">Senin</h2>
+                <p>9 feed slot: 7 TikTok + 2 Instagram.</p>
+              </div>
+              <span id="selectedDayStatus" class="status-pill draft"
+                >BELUM LENGKAP</span
+              >
+            </div>
+            <div class="table-scroll">
+              <table class="plan-table">
+                <thead>
+                  <tr>
+                    <th>Jam</th>
+                    <th>Platform</th>
+                    <th>Format</th>
+                    <th>Status Review</th>
+                    <th>Pillar</th>
+                    <th>Winning Framing</th>
+                    <th>Hook / Judul</th>
+                    <th>Idea / Storyline</th>
+                    <th>Treatment</th>
+                    <th>Asset</th>
+                  </tr>
+                </thead>
+                <tbody id="weeklyPlanBody"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <div id="weeklyStickySubmit" class="weekly-sticky-submit ayu-only">
+            <div>
+              <strong>Content Plan Mingguan</strong>
+              <span id="stickySubmitHint">Draft belum dikirim ke CEO.</span>
+            </div>
+            <div class="weekly-sticky-actions">
+              <button id="saveWeekSticky" class="secondary-btn">
+                Simpan Draft
+              </button>
+              <button id="submitWeekSticky" class="primary-btn">
+                Submit ke CEO
+              </button>
+            </div>
+          </div>
+
+          <div class="story-plan-grid">
+            <article class="panel-card">
+              <div class="panel-head">
+                <div>
+                  <strong>TikTok Story Plan</strong>
+                  <span>7 slot per hari</span>
+                  <span id="ttStoryPlanCounter" class="story-fill-counter"
+                    >0/7 terisi</span
+                  >
+                </div>
+              </div>
+              <div id="ttStoryPlan" class="story-plan-list"></div>
+            </article>
+            <article class="panel-card">
+              <div class="panel-head">
+                <div>
+                  <strong>Instagram Story Plan</strong>
+                  <span>10 slide per hari</span>
+                  <span id="igStoryPlanCounter" class="story-fill-counter"
+                    >0/10 terisi</span
+                  >
+                </div>
+              </div>
+              <div id="igStoryPlan" class="story-plan-list compact"></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- APPROVAL -->
+        <section class="view" id="approval">
+          <div class="page-head">
+            <div class="page-head-text">
+              <p class="eyebrow">CEO REVIEW</p>
+              <h1>Approval Content Plan</h1>
+              <p class="sub">
+                Approve, revisi, atau decline per konten maupun satu minggu.
+              </p>
+            </div>
+            <div class="ceo-only-controls">
+              <button id="reviseWeek" class="secondary-btn">
+                Revisi Mingguan
+              </button>
+              <button id="declineWeek" class="danger-btn">Decline Week</button>
+            </div>
+          </div>
+
+          <div id="approvalGate" class="approval-gate hidden">
+            <div>
+              <strong>Content plan belum disubmit oleh Ayu.</strong>
+              <span
+                >CEO masih bisa preview, tetapi Approve / Revisi / Decline baru
+                aktif setelah Ayu klik “Submit ke CEO”.</span
+              >
+            </div>
+            <button id="goToWeekly" class="secondary-btn">
+              Kembali ke Content Plan
+            </button>
+          </div>
+
+          <div class="approval-banner">
+            <div class="summary-card">
+              <span class="summary-label">Week</span>
+              <strong id="approvalWeekRange" class="summary-val">—</strong>
+            </div>
+            <div class="summary-card">
+              <span class="summary-label">Submitted</span>
+              <strong id="submittedAt" class="summary-val">Belum submit</strong>
+            </div>
+            <div class="summary-card">
+              <span class="summary-label">By</span>
+              <strong class="summary-val">Ayu / Marketing</strong>
+            </div>
+            <div class="summary-card">
+              <span class="summary-label">Overall</span>
+              <div>
+                <strong id="approvalOverall" class="status-pill draft"
+                  >DRAFT</strong
+                >
+              </div>
+            </div>
+          </div>
+
+          <article class="strategy-card">
+            <div class="card-header">
+              <div>
+                <h2>Ringkasan Strategy</h2>
+                <p>Read-only untuk CEO.</p>
+              </div>
+            </div>
+            <div id="approvalStrategy" class="strategy-review"></div>
+          </article>
+
+          <div id="approvalDayTabs" class="day-tabs"></div>
+
+          <div id="approvalList" class="approval-list"></div>
+
+          <article class="history-card">
+            <div class="card-header">
+              <div>
+                <h2>Approval History</h2>
+                <p>Semua keputusan terekam dengan waktu dan komentar.</p>
+              </div>
+            </div>
+            <div id="approvalHistory" class="history-list"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <!-- MODAL -->
+    <div id="modalBackdrop" class="modal-backdrop hidden">
+      <div class="modal">
+        <div class="modal-head">
+          <div>
+            <strong id="modalTitle">Review</strong>
+            <span id="modalSubtitle"></span>
+          </div>
+          <button id="closeModal" class="icon-button" aria-label="Tutup modal">
+            ×
+          </button>
+        </div>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+
+    <!-- Theme Toggle Handler -->
+    <script>
+      (function () {
+        const toggleBtn = document.getElementById("themeToggle");
+        const root = document.documentElement;
+        const saved = localStorage.getItem("mahalu-theme");
+
+        if (
+          saved === "dark" ||
+          (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches)
+        ) {
+          root.classList.add("dark");
+          root.setAttribute("data-theme", "dark");
+        } else {
+          root.classList.remove("dark");
+          root.setAttribute("data-theme", "light");
+        }
+
+        if (toggleBtn) {
+          toggleBtn.addEventListener("click", function () {
+            const isDark = root.classList.toggle("dark");
+            root.setAttribute("data-theme", isDark ? "dark" : "light");
+            localStorage.setItem("mahalu-theme", isDark ? "dark" : "light");
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>
