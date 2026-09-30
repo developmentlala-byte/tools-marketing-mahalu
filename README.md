@@ -3,6 +3,7 @@
 Prototype web app untuk alur kerja marketing Ayu dan approval CEO.
 
 ## Fitur
+
 1. Checklist Harian
    - Jadwal SOP otomatis
    - TikTok Feed 7x / hari
@@ -40,22 +41,26 @@ Prototype web app untuk alur kerja marketing Ayu dan approval CEO.
    - Riwayat upload
 
 ## Cara membuka
-Buka `index.html` langsung di browser.
+
+Jalankan server lokal pada port `5501` agar origin cocok dengan CORS Cloudflare R2, misalnya melalui Live Server dengan port tersebut. Membuka file langsung (`file://`) tidak dapat mengakses Worker/R2 karena origin tidak diizinkan.
 
 ## Prototype vs Production
-Prototype menggunakan `localStorage` untuk data teks/status.
 
-File binary yang dipilih lewat browser TIDAK dipersist setelah refresh.
-Untuk production, ganti file upload ke storage backend seperti Supabase Storage / S3-compatible storage.
+Data teks/status disimpan di Supabase. Aset lama tetap dibaca dari Supabase Storage; upload baru menggunakan Cloudflare R2 melalui Worker penandatangan URL.
 
-## Backend yang direkomendasikan
-- Supabase PostgreSQL
-- Supabase Storage
+Ikuti [panduan storage Cloudflare](PANDUAN-STORAGE-CLOUDFLARE.md) untuk mengonfigurasi CORS, secret Worker, dan URL Worker frontend sebelum mencoba upload.
+
+## Backend
+
+- Supabase PostgreSQL untuk state aplikasi
+- Supabase Storage untuk aset lama
+- Cloudflare R2 untuk upload aset baru
 - Auth dengan 2 role awal:
   - `marketing`
   - `ceo`
 
 ## Tables minimal
+
 - `content_weeks`
 - `content_plan_items`
 - `daily_sop_slots`
@@ -65,6 +70,7 @@ Untuk production, ganti file upload ke storage backend seperti Supabase Storage 
 - `audit_logs`
 
 ## Rule penting
+
 - Jadwal SOP tidak boleh bisa diedit Ayu.
 - Approval marketing: Ayu -> CEO.
 - Revisi dan Decline wajib mempunyai komentar CEO.
@@ -72,22 +78,26 @@ Untuk production, ganti file upload ke storage backend seperti Supabase Storage 
 - Semua perubahan penting harus menyimpan timestamp.
 
 ## Status Approval — revisi terbaru
+
 Workflow status sekarang:
 
 `DRAFT` -> Ayu klik **Submit ke CEO** -> `WAITING CEO`
 
 Kemudian CEO dapat memberi keputusan per konten:
+
 - `APPROVED`
 - `REVISION`
 - `DECLINED`
 
 Status mingguan ikut tersinkron:
+
 - semua approved -> `APPROVED`
 - campuran approved + waiting -> `PARTIAL REVIEW`
 - ada revision -> `REVISION`
 - ada declined -> `DECLINED`
 
 ## Preview Konten untuk CEO
+
 Versi ini menambahkan preview asset pada halaman Approval CEO.
 
 - Ayu upload file pada setiap slot Content Plan.

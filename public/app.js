@@ -1,6 +1,6 @@
 // Mahalu Spa - Ayu Marketing Workspace
-// Static prototype. Text/status data is persisted in Supabase.
-// Actual uploaded files are stored in Supabase Storage.
+// Text/status data is persisted in Supabase. New assets use Cloudflare R2;
+// existing assets without an R2 storage marker remain in Supabase Storage.
 
 const SOP = {
   feed: [
@@ -110,6 +110,8 @@ const supabaseClient = window.supabase
 
 const STATE_ROW_ID = "main";
 const BUCKET_NAME = "content-assets";
+const UPLOAD_API = "https://upload-api.marketingmahalu.workers.dev";
+const MAX_FILE_SIZE = 500 * 1024 * 1024;
 
 function isoDate(d) {
   const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
@@ -131,14 +133,6 @@ function nowLabel() {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function generateAssetCode(originalName = "") {
-  const extMatch = originalName.match(/\.[a-z0-9]+$/i);
-  const ext = extMatch ? extMatch[0].toLowerCase() : "";
-  const part1 = Math.random().toString(36).slice(2, 6).toUpperCase();
-  const part2 = Date.now().toString(36).slice(-4).toUpperCase();
-  return `AST-${part1}-${part2}${ext}`;
 }
 
 function uid() {
@@ -212,41 +206,207 @@ function migratePublishedFlag() {
 }
 
 const localAssetPreviewCache = {};
+const pendingUploads = Object.create(null);
+const signedUrlCache = Object.create(null);
+
+async function api(path, payload, signal) {
+  if (UPLOAD_API.includes("<subdomain>")) {
+    throw new Error(
+      "URL Cloudflare Worker belum dikonfigurasi di public/app.js",
+    );
+  }
+  const response = await fetch(`${UPLOAD_API}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok)
+    throw new Error(data.error || `Server error ${response.status}`);
+  return data;
+}
+
+async function getR2Url(key) {
+  const cached = signedUrlCache[key];
+  if (cached && cached.exp > Date.now() + 60000) return cached.url;
+  const { url, expiresIn } = await api("/sign-download", { key });
+  signedUrlCache[key] = { url, exp: Date.now() + expiresIn * 1000 };
+  return url;
+}
+
+function putWithProgress(url, file, onProgress, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Dibatalkan", "AbortError"));
+      return;
+    }
+
+    const xhr = new XMLHttpRequest();
+    const cleanup = () => signal?.removeEventListener("abort", abortUpload);
+    const abortUpload = () => xhr.abort();
+
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      cleanup();
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`Upload gagal (HTTP ${xhr.status})`));
+    };
+    xhr.onerror = () => {
+      cleanup();
+      reject(new Error("Koneksi terputus saat upload"));
+    };
+    xhr.onabort = () => {
+      cleanup();
+      reject(new DOMException("Dibatalkan", "AbortError"));
+    };
+    signal?.addEventListener("abort", abortUpload, { once: true });
+    xhr.send(file);
+  });
+}
+
+function validateFile(file) {
+  if (!/^(image\/[\w.+-]+|video\/[\w.+-]+|application\/pdf)$/.test(file.type)) {
+    return "Tipe file tidak didukung. Gunakan gambar, video, atau PDF.";
+  }
+  if (file.size <= 0) return "File kosong tidak dapat diupload.";
+  if (file.size > MAX_FILE_SIZE) {
+    return `Ukuran ${(file.size / 1048576).toFixed(0)} MB melebihi batas 500 MB.`;
+  }
+  return "";
+}
+
+function pendingHtml(itemId) {
+  return (pendingUploads[itemId] || [])
+    .map((upload) => {
+      const uploading = upload.status === "uploading";
+      return `<div class="upload-chip ${upload.status}" role="status">
+        <span class="upload-name" title="${escapeAttr(upload.name)}">${escapeHtml(upload.name)}</span>
+        ${
+          uploading
+            ? `<div class="upload-progress" role="progressbar" aria-label="Progress upload ${escapeAttr(upload.name)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${upload.pct}"><i style="width:${upload.pct}%"></i></div>
+              <span class="upload-percent">${upload.pct}%</span>
+              <button class="upload-cancel" data-cancel-upload="${upload.id}" data-upload-item="${itemId}" type="button" aria-label="Batalkan upload ${escapeAttr(upload.name)}" title="Batalkan upload">×</button>`
+            : `<small>${escapeHtml(upload.error)}</small>`
+        }
+      </div>`;
+    })
+    .join("");
+}
+
+function paintPending(itemId) {
+  document
+    .querySelectorAll(`[data-pending-zone="${itemId}"]`)
+    .forEach((zone) => (zone.innerHTML = pendingHtml(itemId)));
+}
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-cancel-upload]");
+  if (!button) return;
+  const upload = (pendingUploads[button.dataset.uploadItem] || []).find(
+    (item) => item.id === button.dataset.cancelUpload,
+  );
+  if (upload) {
+    upload.status = "canceling";
+    upload.error = "Membatalkan upload...";
+    paintPending(button.dataset.uploadItem);
+    upload.ctrl.abort();
+  }
+});
+
+window.addEventListener("beforeunload", (event) => {
+  const busy = Object.values(pendingUploads).some((uploads) =>
+    uploads.some((upload) => upload.status === "uploading"),
+  );
+  if (busy) {
+    event.preventDefault();
+    event.returnValue = "";
+  }
+});
 
 async function uploadStoryAssetFiles(itemId, fileList) {
   const uploaded = [];
   for (const file of Array.from(fileList)) {
-    const code = generateAssetCode(file.name);
-    const path = `${itemId}/${code}`;
-    if (supabaseClient) {
-      const { error } = await supabaseClient.storage
-        .from(BUCKET_NAME)
-        .upload(path, file, {
-          upsert: true,
-          contentType: file.type || undefined,
-        });
-      if (error) throw error;
+    const upload = {
+      id: uid(),
+      name: file.name,
+      pct: 0,
+      status: "uploading",
+      error: "",
+      ctrl: new AbortController(),
+    };
+    (pendingUploads[itemId] ||= []).push(upload);
+    paintPending(itemId);
+
+    try {
+      const validationError = validateFile(file);
+      if (validationError) throw new Error(validationError);
+      const { key, code, uploadUrl } = await api(
+        "/sign-upload",
+        { itemId, filename: file.name, type: file.type, size: file.size },
+        upload.ctrl.signal,
+      );
+      if (upload.ctrl.signal.aborted) {
+        throw new DOMException("Dibatalkan", "AbortError");
+      }
+      await putWithProgress(
+        uploadUrl,
+        file,
+        (pct) => {
+          upload.pct = pct;
+          paintPending(itemId);
+        },
+        upload.ctrl.signal,
+      );
+      localAssetPreviewCache[code] = URL.createObjectURL(file);
+      uploaded.push({
+        code,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        storage: "r2",
+        key,
+      });
+      pendingUploads[itemId] = pendingUploads[itemId].filter(
+        (item) => item !== upload,
+      );
+    } catch (error) {
+      if (upload.ctrl.signal.aborted) {
+        pendingUploads[itemId] = pendingUploads[itemId].filter(
+          (item) => item !== upload,
+        );
+      } else {
+        upload.status = "error";
+        upload.error = error.message || "Upload gagal. Coba lagi.";
+        window.setTimeout(() => {
+          pendingUploads[itemId] = (pendingUploads[itemId] || []).filter(
+            (item) => item !== upload,
+          );
+          paintPending(itemId);
+        }, 10000);
+      }
     }
-    localAssetPreviewCache[code] = URL.createObjectURL(file);
-    uploaded.push({
-      code,
-      name: code,
-      type: file.type || "",
-      size: file.size || 0,
-    });
+    paintPending(itemId);
   }
   return uploaded;
 }
 
-async function removeStoryAssetFile(itemId, code) {
-  try {
-    if (supabaseClient) {
-      await supabaseClient.storage
-        .from(BUCKET_NAME)
-        .remove([`${itemId}/${code}`]);
-    }
-  } catch (e) {
-    console.warn("Gagal hapus asset:", e);
+async function removeStoryAssetFile(itemId, code, asset = null) {
+  if (asset?.storage === "r2") {
+    await api("/delete", { key: asset.key });
+    delete signedUrlCache[asset.key];
+  } else {
+    if (!supabaseClient) throw new Error("Koneksi Supabase tidak tersedia.");
+    const { error } = await supabaseClient.storage
+      .from(BUCKET_NAME)
+      .remove([`${itemId}/${code}`]);
+    if (error) throw error;
   }
   if (localAssetPreviewCache[code]) {
     try {
@@ -300,19 +460,62 @@ async function loadState() {
 }
 
 let saveStateTimer = null;
+let saveToastTimer = null;
+let saveRevision = 0;
+
+function showSaveToast(message, status = "success") {
+  const toast = document.getElementById("saveToast");
+  const toastIcon = document.getElementById("saveToastIcon");
+  const toastMessage = document.getElementById("saveToastMessage");
+  if (!toast || !toastIcon || !toastMessage) return;
+
+  toast.dataset.status = status;
+  toastMessage.textContent = message;
+  toastIcon.textContent =
+    status === "success" ? "✓" : status === "error" ? "!" : "";
+  toast.classList.remove("pending", "saving", "success", "error");
+  toast.classList.add(status);
+  toast.classList.add("is-visible");
+
+  clearTimeout(saveToastTimer);
+  if (status === "pending" || status === "saving") return;
+
+  saveToastTimer = window.setTimeout(
+    () => {
+      toast.classList.remove("is-visible");
+      saveToastTimer = null;
+    },
+    status === "error" ? 4500 : 2200,
+  );
+}
+
 function saveState() {
+  const revision = ++saveRevision;
   clearTimeout(saveStateTimer);
+  showSaveToast("Menunggu disimpan...", "pending");
   saveStateTimer = setTimeout(async () => {
+    if (revision === saveRevision) {
+      showSaveToast("Menyimpan perubahan...", "saving");
+    }
     try {
-      if (!supabaseClient) return;
+      if (!supabaseClient) {
+        throw new Error("Koneksi Supabase tidak tersedia.");
+      }
       const { error } = await supabaseClient.from("app_state").upsert({
         id: STATE_ROW_ID,
         data: state,
         updated_at: new Date().toISOString(),
       });
       if (error) throw error;
+      if (revision === saveRevision) showSaveToast("Perubahan tersimpan");
     } catch (e) {
       console.error("Gagal simpan state ke Supabase:", e);
+      if (revision === saveRevision) {
+        showSaveToast(
+          "Perubahan belum tersimpan. Periksa koneksi lalu coba lagi.",
+          "error",
+        );
+      }
     }
   }, 600);
 }
@@ -848,7 +1051,10 @@ function renderPlanDay() {
       <td class="cell-asset">
         <label class="cell-label">Asset</label>
         <div class="feed-asset-cell">
-          <div class="story-asset-thumbs">${thumbsHtml || `<div class="asset-thumb-empty">Belum ada file</div>`}</div>
+          <div class="story-asset-thumbs">
+            ${thumbsHtml || `<div class="asset-thumb-empty">Belum ada file</div>`}
+            <div class="upload-pending-zone" data-pending-zone="${item.id}">${pendingHtml(item.id)}</div>
+          </div>
           ${
             canEdit
               ? `<label class="story-asset-add">
@@ -884,13 +1090,8 @@ function renderPlanDay() {
       const item = day.feed[idx];
       const files = input.files;
       if (!files || !files.length) return;
-      try {
-        const uploaded = await uploadStoryAssetFiles(item.id, files);
-        item.assets = item.assets.concat(uploaded);
-      } catch (err) {
-        console.error(err);
-        alert("Ada file yang gagal diupload, coba lagi.");
-      }
+      const uploaded = await uploadStoryAssetFiles(item.id, files);
+      item.assets = item.assets.concat(uploaded);
       saveState();
       renderPlanDay();
     });
@@ -902,7 +1103,13 @@ function renderPlanDay() {
       const idx = Number(btn.dataset.feedItem);
       const item = day.feed[idx];
       const code = btn.dataset.feedRemove;
-      await removeStoryAssetFile(item.id, code);
+      const asset = item.assets.find((itemAsset) => itemAsset.code === code);
+      try {
+        await removeStoryAssetFile(item.id, code, asset);
+      } catch (error) {
+        alert(`File belum terhapus: ${error.message}`);
+        return;
+      }
       item.assets = item.assets.filter((a) => a.code !== code);
       saveState();
       renderPlanDay();
@@ -991,13 +1198,8 @@ function renderStoryPlans(day) {
         const item = list[Number(input.dataset.upload)];
         const files = input.files;
         if (!files || !files.length) return;
-        try {
-          const uploaded = await uploadStoryAssetFiles(item.id, files);
-          item.assets = item.assets.concat(uploaded);
-        } catch (err) {
-          console.error(err);
-          alert("Ada file yang gagal diupload, coba lagi.");
-        }
+        const uploaded = await uploadStoryAssetFiles(item.id, files);
+        item.assets = item.assets.concat(uploaded);
         refresh();
       }),
     );
@@ -1007,7 +1209,13 @@ function renderStoryPlans(day) {
         const list = rootId === "ttStoryPlan" ? day.ttStory : day.igStory;
         const item = list[Number(btn.dataset.itemIndex)];
         const code = btn.dataset.removeAsset;
-        await removeStoryAssetFile(item.id, code);
+        const asset = item.assets.find((itemAsset) => itemAsset.code === code);
+        try {
+          await removeStoryAssetFile(item.id, code, asset);
+        } catch (error) {
+          alert(`File belum terhapus: ${error.message}`);
+          return;
+        }
         item.assets = item.assets.filter((a) => a.code !== code);
         refresh();
       }),
@@ -1077,7 +1285,10 @@ function renderStoryList(rootId, list, opts) {
       </div>
       <input ${canEdit ? "" : "disabled"} data-idea="${i}" class="story-idea-input" value="${escapeAttr(x.idea)}" placeholder="${opts.ideaPlaceholder}">
       <div class="story-asset-zone">
-        <div class="story-asset-thumbs">${thumbsHtml || `<div class="asset-thumb-empty">Belum ada file</div>`}</div>
+        <div class="story-asset-thumbs">
+          ${thumbsHtml || `<div class="asset-thumb-empty">Belum ada file</div>`}
+          <div class="upload-pending-zone" data-pending-zone="${x.id}">${pendingHtml(x.id)}</div>
+        </div>
         ${
           canEdit
             ? `<label class="story-asset-add">
@@ -1269,6 +1480,7 @@ async function openAssetCarousel(
   async function resolveUrl(asset) {
     if (localAssetPreviewCache[asset.code])
       return localAssetPreviewCache[asset.code];
+    if (asset.storage === "r2") return getR2Url(asset.key);
     if (sessionUrls[asset.code]) return sessionUrls[asset.code];
     const blob = await fetchStoryAssetBlob(itemId, asset.code);
     if (!blob) return null;
@@ -1282,7 +1494,12 @@ async function openAssetCarousel(
     const stage = document.getElementById("carouselStage");
     if (!stage) return;
     stage.innerHTML = `<div class="preview-empty">Memuat...</div>`;
-    const url = await resolveUrl(asset);
+    let url = null;
+    try {
+      url = await resolveUrl(asset);
+    } catch (error) {
+      console.error("Gagal memuat preview asset:", error);
+    }
     const type = asset.type || "";
     if (!url) {
       stage.innerHTML = `<div class="preview-empty">Preview tidak tersedia.<br><strong>${escapeHtml(asset.name)}</strong></div>`;
@@ -1645,7 +1862,6 @@ document
 document.getElementById("weekNotes")?.addEventListener("input", saveWeekFields);
 document.getElementById("saveWeek")?.addEventListener("click", () => {
   saveWeekFields();
-  alert("Draft tersimpan di browser prototype.");
 });
 document.getElementById("submitWeek")?.addEventListener("click", submitWeek);
 document
@@ -1653,7 +1869,6 @@ document
   ?.addEventListener("click", submitWeek);
 document.getElementById("saveWeekSticky")?.addEventListener("click", () => {
   saveWeekFields();
-  alert("Draft tersimpan di browser prototype.");
 });
 document.getElementById("goToWeekly")?.addEventListener("click", () => {
   setRole("ayu");
