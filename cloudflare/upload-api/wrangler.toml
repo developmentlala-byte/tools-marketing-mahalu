@@ -5,5 +5,4 @@ compatibility_date = "2026-09-30"
 [vars]
 ACCOUNT_ID = "85d13291b0cb29aa63d9d7ede8960edc"
 BUCKET = "content-assets"
-ALLOWED_ORIGINS = "http://127.0.0.1:5501,http://localhost:5501,https://tools-marketing-mahalu.vercel.app
-"
+ALLOWED_ORIGINS = "http://127.0.0.1:5501,http://localhost:5501,https://tools-marketing-mahalu.vercel.app"
